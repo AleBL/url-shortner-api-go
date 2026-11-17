@@ -7,6 +7,7 @@ import (
 	"sync"
 	"url-shortener/models"
 
+	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -25,17 +26,28 @@ func Path() string {
 	return defaultDBPath
 }
 
+// dialector picks PostgreSQL when DATABASE_URL is set (hosts without persistent
+// disks, like Render's free plan) and falls back to the local SQLite file.
+func dialector() gorm.Dialector {
+	if dsn := os.Getenv("DATABASE_URL"); dsn != "" {
+		log.Println("Using PostgreSQL database")
+		return postgres.Open(dsn)
+	}
+
+	path := Path()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		log.Fatal("Error creating database directory:", err)
+	}
+	log.Println("Using SQLite database at", path)
+	// busy_timeout makes concurrent writers wait instead of failing with "database is locked".
+	return sqlite.Open(path + "?_busy_timeout=5000")
+}
+
 func ConnectDB() *gorm.DB {
 	once.Do(func() {
-		path := Path()
-		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-			log.Fatal("Error creating database directory:", err)
-		}
-
 		var err error
-		// busy_timeout makes concurrent writers wait instead of failing with "database is locked".
 		// TranslateError maps driver errors to gorm.ErrDuplicatedKey and friends.
-		db, err = gorm.Open(sqlite.Open(path+"?_busy_timeout=5000"), &gorm.Config{TranslateError: true})
+		db, err = gorm.Open(dialector(), &gorm.Config{TranslateError: true})
 		if err != nil {
 			log.Fatal("Error opening database:", err)
 		}

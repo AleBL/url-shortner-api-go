@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # go-sqlite3 needs cgo, so build on Debian and run on a glibc-based distroless image.
-FROM golang:1.23-bookworm AS build
+FROM golang:1.25-bookworm AS build
 WORKDIR /src
 
 COPY go.mod go.sum ./
