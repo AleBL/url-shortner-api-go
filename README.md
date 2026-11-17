@@ -1,6 +1,6 @@
 # URL Shortener
 
-This is a simple URL shortener in Go, using Gin, SQLite and the GORM ORM to store the original URLs and the generated short codes.
+This is a simple URL shortener in Go, using Gin, the GORM ORM and SQLite (or PostgreSQL) to store the original URLs and the generated short codes.
 
 ## Features
 
@@ -10,7 +10,7 @@ This is a simple URL shortener in Go, using Gin, SQLite and the GORM ORM to stor
 
 ## Requirements
 
-- Go 1.23+
+- Go 1.25+
 - A C compiler (`gcc`), because the SQLite driver uses cgo
 - Docker (optional)
 
@@ -49,6 +49,9 @@ The database is stored in the `data` volume, so it survives container restarts.
 
 ```bash
 go test ./...
+
+# against PostgreSQL
+DATABASE_URL="postgres://postgres:test@localhost:5432/shortener?sslmode=disable" go test -p 1 ./...
 ```
 
 ## Configuration
@@ -56,7 +59,8 @@ go test ./...
 | Variable   | Default                           | Description                                                                                                                   |
 | ---------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `PORT`     | `8080`                            | HTTP port.                                                                                                                    |
-| `DB_PATH`  | `./internal/database/database.db` | SQLite file. The directory is created if missing. The Docker image uses `/data/database.db`.                                  |
+| `DATABASE_URL` | empty                         | PostgreSQL connection string (e.g. `postgres://user:pass@host/db?sslmode=require`). When set, it is used instead of SQLite. |
+| `DB_PATH`  | `./internal/database/database.db` | SQLite file, used when `DATABASE_URL` is empty. The directory is created if missing. The Docker image uses `/data/database.db`. |
 | `BASE_URL` | empty                             | Public address used to build `short_url` (e.g. `https://sho.rt`). When empty, the request host is used, with `https` detected from TLS or the `X-Forwarded-Proto` header. |
 | `GIN_MODE` | `debug`                           | Use `release` in production (already set in the Docker image).                                                               |
 
