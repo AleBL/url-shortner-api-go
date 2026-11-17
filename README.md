@@ -63,6 +63,9 @@ DATABASE_URL="postgres://postgres:test@localhost:5432/shortener?sslmode=disable"
 | `DB_PATH`  | `./internal/database/database.db` | SQLite file, used when `DATABASE_URL` is empty. The directory is created if missing. The Docker image uses `/data/database.db`. |
 | `BASE_URL` | empty                             | Public address used to build `short_url` (e.g. `https://sho.rt`). When empty, the request host is used, with `https` detected from TLS or the `X-Forwarded-Proto` header. |
 | `ALLOWED_ORIGINS` | empty                      | Comma-separated frontend origins allowed by CORS (e.g. `https://app.example.com,http://localhost:5173`). When empty, browsers only accept same-origin calls. |
+| `RATE_LIMIT_PER_MINUTE` | `10`                   | Requests per minute per client IP on `POST /shorten`. `0` disables the limit.                                                 |
+| `CLIENT_IP_HEADER` | empty                     | Header where the hosting proxy puts the real client IP (see [Rate limiting](#rate-limiting)). When empty, the TCP peer address is used. |
+| `DEBUG_CLIENT_IP` | empty                      | `true` enables `GET /debug/client-ip`, used to find the right `CLIENT_IP_HEADER`. Keep it off otherwise.                     |
 | `GIN_MODE` | `debug`                           | Use `release` in production (already set in the Docker image).                                                               |
 
 ## Endpoints
@@ -74,7 +77,7 @@ DATABASE_URL="postgres://postgres:test@localhost:5432/shortener?sslmode=disable"
 | GET    | `/:shortURL`          | Redirects (`302`) to the original URL. |
 | GET    | `/api/urls/:shortURL` | Returns the original URL as JSON.      |
 
-Errors use the shape `{"error": "message"}`.
+Errors use the shape `{"error": "message"}`. `POST /shorten` returns `429` with a `Retry-After` header when a client exceeds the rate limit.
 
 **Shorten a URL**
 
@@ -129,6 +132,25 @@ Free plan limitations:
 - Render spins the service down after 15 minutes without traffic; the next request takes about a minute.
 - Render grants 750 free instance hours per month, enough for one service running all month.
 - Neon's free plan has 1 GB of storage per project and suspends the database after 5 minutes idle (it resumes in under a second).
+
+### Rate limiting
+
+`POST /shorten` is limited per client IP. Behind a proxy, such as Render's, every request comes from the proxy address, so the API must read the client IP from a header the proxy sets. `X-Forwarded-For` is never trusted, because clients can forge it.
+
+To find the right header on a new platform:
+
+1. Set `DEBUG_CLIENT_IP=true` and redeploy.
+2. Send forged values and compare the response with your real IP (`curl -s https://api.ipify.org`):
+
+   ```bash
+   curl -s https://<service>/debug/client-ip \
+     -H "X-Forwarded-For: 1.2.3.4" -H "True-Client-IP: 1.2.3.4" -H "CF-Connecting-IP: 1.2.3.4"
+   ```
+
+3. A header that shows your real IP, even though you sent `1.2.3.4`, is overwritten by the proxy and safe to use. Set `CLIENT_IP_HEADER` to its name.
+4. Remove `DEBUG_CLIENT_IP` and redeploy.
+
+Until `CLIENT_IP_HEADER` is set, all clients behind the proxy share a single limit.
 
 ### Other platforms
 
