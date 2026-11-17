@@ -125,6 +125,8 @@ The repository includes a [Render Blueprint](render.yaml) that creates a free Do
 3. Paste the Neon connection string when Render asks for `DATABASE_URL`.
 4. After the first deploy, the API is available at `https://<service-name>.onrender.com`.
 
+The Blueprint sets `CLIENT_IP_HEADER=CF-Connecting-IP`: Render sits behind Cloudflare, which writes the real client IP to that header.
+
 Deploys run automatically after the CI checks pass on `master`. Optionally set `BASE_URL` in the service environment when the short links must use a different domain than the request host.
 
 Free plan limitations:
@@ -144,8 +146,10 @@ To find the right header on a new platform:
 
    ```bash
    curl -s https://<service>/debug/client-ip \
-     -H "X-Forwarded-For: 1.2.3.4" -H "True-Client-IP: 1.2.3.4" -H "CF-Connecting-IP: 1.2.3.4"
+     -H "X-Forwarded-For: 1.2.3.4" -H "True-Client-IP: 1.2.3.4" -H "X-Real-IP: 1.2.3.4"
    ```
+
+   Do not send `CF-Connecting-IP` to a platform behind Cloudflare: Cloudflare rejects the request with `error code: 1000`. If the response shows `Cf-Connecting-Ip`, Cloudflare set it.
 
 3. A header that shows your real IP, even though you sent `1.2.3.4`, is overwritten by the proxy and safe to use. Set `CLIENT_IP_HEADER` to its name.
 4. Remove `DEBUG_CLIENT_IP` and redeploy.

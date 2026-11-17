@@ -20,7 +20,8 @@ services:
       # Frontend origins allowed by CORS, e.g. https://app.example.com
       - key: ALLOWED_ORIGINS
         sync: false
-      # Header with the real client IP, used by the rate limit. Find it with
-      # GET /debug/client-ip before setting it (see README, Rate limiting).
+      # Header with the real client IP, used by the rate limit. Render sits behind
+      # Cloudflare, which overwrites CF-Connecting-IP with the client address
+      # (checked with GET /debug/client-ip, see README, Rate limiting).
       - key: CLIENT_IP_HEADER
-        sync: false
+        value: CF-Connecting-IP
