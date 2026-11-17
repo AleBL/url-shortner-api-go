@@ -3,6 +3,7 @@ package controllers
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"url-shortener/internal/logic"
 	"url-shortener/internal/services"
 
@@ -35,7 +36,7 @@ func ShortenURL(c *gin.Context) {
 	}
 
 	hasTLS := c.Request.TLS != nil
-	c.JSON(http.StatusOK, gin.H{"short_url": logic.GetFullURL(shortURL, hasTLS, c.Request.Host)})
+	c.JSON(http.StatusOK, gin.H{"short_url": logic.GetFullURL(shortURL, os.Getenv("BASE_URL"), hasTLS, c.Request.Host)})
 }
 
 func getOriginalURL(c *gin.Context) (string, error) {
