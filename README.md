@@ -5,8 +5,8 @@ This is a simple URL shortener in Go, using Gin, SQLite and the GORM ORM to stor
 ## Features
 
 - Shorten `http` and `https` URLs
+- Redirect short links to their original URLs
 - Look up the original URL of a short code
-- Redirect short codes to their original URLs
 
 ## Requirements
 
@@ -66,8 +66,8 @@ go test ./...
 | ------ | --------------------- | -------------------------------------- |
 | GET    | `/health`             | Health check.                          |
 | POST   | `/shorten`            | Creates a short code for a URL.        |
-| GET    | `/:shortURL`          | Returns the original URL as JSON.      |
-| GET    | `/redirect/:shortURL` | Redirects (`302`) to the original URL. |
+| GET    | `/:shortURL`          | Redirects (`302`) to the original URL. |
+| GET    | `/api/urls/:shortURL` | Returns the original URL as JSON.      |
 
 Errors use the shape `{"error": "message"}`.
 
@@ -82,19 +82,19 @@ curl -X POST http://localhost:8080/shorten \
 
 Returns `400` when the body is not JSON, the URL is missing, or it is not an absolute `http`/`https` URL.
 
+**Redirect** (the `short_url` itself)
+
+```bash
+curl -i http://localhost:8080/aZ3kP9
+# HTTP/1.1 302 Found
+# Location: https://go.dev
+```
+
 **Get the original URL**
 
 ```bash
-curl http://localhost:8080/aZ3kP9
+curl http://localhost:8080/api/urls/aZ3kP9
 # {"originalURL":"https://go.dev"}
-```
-
-**Redirect**
-
-```bash
-curl -i http://localhost:8080/redirect/aZ3kP9
-# HTTP/1.1 302 Found
-# Location: https://go.dev
 ```
 
 Unknown codes return `404`.
