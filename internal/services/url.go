@@ -5,8 +5,7 @@ import (
 	"url-shortener/internal/database"
 	"url-shortener/models"
 
-	"github.com/jinzhu/gorm"
-	"github.com/mattn/go-sqlite3"
+	"gorm.io/gorm"
 )
 
 var (
@@ -19,8 +18,7 @@ func SaveURL(originalURL, shortURL string) error {
 	url := models.URL{OriginalURL: originalURL, ShortURL: shortURL}
 
 	err := db.Create(&url).Error
-	var sqliteErr sqlite3.Error
-	if errors.As(err, &sqliteErr) && sqliteErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+	if errors.Is(err, gorm.ErrDuplicatedKey) {
 		return ErrShortURLTaken
 	}
 	return err
@@ -31,7 +29,7 @@ func FindUrlByShortUrl(shortURL string) (string, error) {
 	var url models.URL
 
 	err := db.Where("short_url = ?", shortURL).First(&url).Error
-	if gorm.IsRecordNotFoundError(err) {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return "", ErrNotFound
 	}
 	if err != nil {
