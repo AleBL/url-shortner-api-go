@@ -57,7 +57,7 @@ go test ./...
 | ---------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `PORT`     | `8080`                            | HTTP port.                                                                                                                    |
 | `DB_PATH`  | `./internal/database/database.db` | SQLite file. The directory is created if missing. The Docker image uses `/data/database.db`.                                  |
-| `BASE_URL` | empty                             | Public address used to build `short_url` (e.g. `https://sho.rt`). Set it in production: behind a proxy the request host and scheme are not reliable. |
+| `BASE_URL` | empty                             | Public address used to build `short_url` (e.g. `https://sho.rt`). When empty, the request host is used, with `https` detected from TLS or the `X-Forwarded-Proto` header. |
 | `GIN_MODE` | `debug`                           | Use `release` in production (already set in the Docker image).                                                               |
 
 ## Endpoints
@@ -108,11 +108,26 @@ Import [`docs/postman/url-shortener.postman_collection.json`](docs/postman/url-s
 
 ## Deploy
 
-The Docker image is self-contained. On the hosting platform:
+### Render
+
+The repository includes a [Render Blueprint](render.yaml) that creates a Docker web service with a 1 GB persistent disk mounted at `/data`.
+
+1. In the Render dashboard, choose **New > Blueprint** and connect this repository.
+2. Review the plan and confirm. Persistent disks require a paid instance type.
+3. After the first deploy, the API is available at `https://<service-name>.onrender.com`.
+
+Deploys run automatically after the CI checks pass on `master`. Optionally set `BASE_URL` in the service environment when the short links must use a different domain than the request host.
+
+Limitations of a service with a disk: a single instance, and a few seconds of downtime on each deploy.
+
+### Other platforms
+
+The Docker image is self-contained:
 
 1. Build from the `Dockerfile`.
 2. Mount a persistent volume at `/data`. Without it, every redeploy erases the database.
-3. Set `BASE_URL` to the public address of the API.
-4. Use `/health` as the health check path.
+3. Use `/health` as the health check path.
+
+The container runs as root because platform volumes are often mounted owned by root, which a non-root user cannot write to.
 
 SQLite supports a single instance only. Scaling to more than one instance requires moving to a server database such as PostgreSQL.

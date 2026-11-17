@@ -1,0 +1,17 @@
+# Render Blueprint: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: url-shortener
+    runtime: docker
+    # No plan set: Render uses its default paid instance. Persistent disks are not
+    # available on the free instance type.
+    region: virginia
+    branch: master
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    # Deploy only after the GitHub Actions checks pass on master.
+    autoDeployTrigger: checksPass
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1
