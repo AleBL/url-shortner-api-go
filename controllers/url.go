@@ -1,14 +1,18 @@
 package controllers
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
 	"os"
+	"strings"
 	"url-shortener/internal/logic"
 	"url-shortener/internal/services"
 
 	"github.com/gin-gonic/gin"
 )
+
+// maxShortURLAttempts bounds retries when a generated code already exists.
+const maxShortURLAttempts = 5
 
 func ShortenURL(c *gin.Context) {
 	var request struct {
@@ -20,16 +24,19 @@ func ShortenURL(c *gin.Context) {
 		return
 	}
 
-	originalURL := request.URL
+	originalURL := strings.TrimSpace(request.URL)
 
 	if originalURL == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "URL not provided"})
 		return
 	}
 
-	shortURL := logic.GenerateShortURL()
+	if err := logic.ValidateURL(originalURL); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
-	err := services.URL.SaveURL(originalURL, shortURL)
+	shortURL, err := saveWithUniqueShortURL(originalURL)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error saving URL"})
 		return
@@ -39,25 +46,46 @@ func ShortenURL(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"short_url": logic.GetFullURL(shortURL, os.Getenv("BASE_URL"), hasTLS, c.Request.Host)})
 }
 
-func getOriginalURL(c *gin.Context) (string, error) {
+func saveWithUniqueShortURL(originalURL string) (string, error) {
+	for attempt := 0; attempt < maxShortURLAttempts; attempt++ {
+		shortURL := logic.GenerateShortURL()
+
+		err := services.SaveURL(originalURL, shortURL)
+		if err == nil {
+			return shortURL, nil
+		}
+		if !errors.Is(err, services.ErrShortURLTaken) {
+			return "", err
+		}
+	}
+	return "", services.ErrShortURLTaken
+}
+
+// getOriginalURL writes the error response itself, so callers only return on error.
+func getOriginalURL(c *gin.Context) (string, bool) {
 	shortURL := c.Param("shortURL")
 
 	if shortURL == "" {
-		return "", fmt.Errorf("invalid shortURL")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid short URL"})
+		return "", false
 	}
 
 	originalURL, err := services.FindUrlByShortUrl(shortURL)
-	if err != nil {
+	if errors.Is(err, services.ErrNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "URL not found"})
-		return "", err
+		return "", false
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching URL"})
+		return "", false
 	}
 
-	return originalURL, nil
+	return originalURL, true
 }
 
 func RedirectURL(c *gin.Context) {
-	originalURL, err := getOriginalURL(c)
-	if err != nil {
+	originalURL, ok := getOriginalURL(c)
+	if !ok {
 		return
 	}
 
@@ -65,8 +93,8 @@ func RedirectURL(c *gin.Context) {
 }
 
 func OriginalURL(c *gin.Context) {
-	originalURL, err := getOriginalURL(c)
-	if err != nil {
+	originalURL, ok := getOriginalURL(c)
+	if !ok {
 		return
 	}
 
