@@ -14,6 +14,7 @@ func Health(c *gin.Context) {
 func SetupRoutes(router *gin.Engine) {
 	router.GET("/health", Health)
 	router.POST("/shorten", controllers.ShortenURL)
-	router.GET("/:shortURL", controllers.OriginalURL)
-	router.GET("/redirect/:shortURL", controllers.RedirectURL)
+	// The short link returned by /shorten redirects; the JSON lookup lives under /api.
+	router.GET("/:shortURL", controllers.RedirectURL)
+	router.GET("/api/urls/:shortURL", controllers.OriginalURL)
 }
