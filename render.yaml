@@ -17,3 +17,10 @@ services:
       # Asked for when the Blueprint is created. Never commit the real value.
       - key: DATABASE_URL
         sync: false
+      # Frontend origins allowed by CORS, e.g. https://app.example.com
+      - key: ALLOWED_ORIGINS
+        sync: false
+      # Header with the real client IP, used by the rate limit. Find it with
+      # GET /debug/client-ip before setting it (see README, Rate limiting).
+      - key: CLIENT_IP_HEADER
+        sync: false

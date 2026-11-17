@@ -20,6 +20,8 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	os.Setenv("DB_PATH", filepath.Join(dir, "test.db"))
+	// Rate limiting has its own tests; disable it so handler tests are independent.
+	os.Setenv("RATE_LIMIT_PER_MINUTE", "0")
 	gin.SetMode(gin.TestMode)
 
 	code := m.Run()
@@ -82,6 +84,16 @@ func TestShortenURL(t *testing.T) {
 				t.Fatalf("status = %d, want %d, body = %s", rec.Code, tt.wantStatus, rec.Body)
 			}
 		})
+	}
+}
+
+func TestShortenURLRejectsLargeBody(t *testing.T) {
+	body := `{"url":"https://go.dev/` + strings.Repeat("a", 5000) + `"}`
+	rec := doRequest(newRouter(), http.MethodPost, "/shorten", body)
+
+	// The size cap rejects it while reading, before URL validation runs.
+	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "Error reading JSON") {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body)
 	}
 }
 
