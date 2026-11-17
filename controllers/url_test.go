@@ -95,11 +95,26 @@ func TestShortenURLUsesBaseURL(t *testing.T) {
 	}
 }
 
+func TestShortenURLBehindTLSProxy(t *testing.T) {
+	router := newRouter()
+
+	req := httptest.NewRequest(http.MethodPost, "/shorten", strings.NewReader(`{"url":"https://go.dev"}`))
+	req.Host = "sho.rt"
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Forwarded-Proto", "https")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if !strings.Contains(rec.Body.String(), `"short_url":"https://sho.rt/`) {
+		t.Fatalf("expected https short_url, got %s", rec.Body)
+	}
+}
+
 func TestOriginalURL(t *testing.T) {
 	router := newRouter()
 	code := shorten(t, router, "https://go.dev/doc")
 
-	rec := doRequest(router, http.MethodGet, "/"+code, "")
+	rec := doRequest(router, http.MethodGet, "/api/urls/"+code, "")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body)
 	}
@@ -112,7 +127,7 @@ func TestRedirectURL(t *testing.T) {
 	router := newRouter()
 	code := shorten(t, router, "https://go.dev/blog")
 
-	rec := doRequest(router, http.MethodGet, "/redirect/"+code, "")
+	rec := doRequest(router, http.MethodGet, "/"+code, "")
 	if rec.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusFound)
 	}
@@ -124,11 +139,21 @@ func TestRedirectURL(t *testing.T) {
 func TestUnknownShortURL(t *testing.T) {
 	router := newRouter()
 
-	for _, path := range []string{"/zzzzzz", "/redirect/zzzzzz"} {
+	for _, path := range []string{"/zzzzzz", "/api/urls/zzzzzz"} {
 		rec := doRequest(router, http.MethodGet, path, "")
 		if rec.Code != http.StatusNotFound {
 			t.Fatalf("GET %s status = %d, want %d", path, rec.Code, http.StatusNotFound)
 		}
+	}
+}
+
+func TestRedirectRouteRemoved(t *testing.T) {
+	router := newRouter()
+	code := shorten(t, router, "https://go.dev")
+
+	rec := doRequest(router, http.MethodGet, "/redirect/"+code, "")
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("GET /redirect/:code status = %d, want %d", rec.Code, http.StatusNotFound)
 	}
 }
 

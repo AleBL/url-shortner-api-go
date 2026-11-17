@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "3f1c9a2e-6b7d-4e8f-9a0b-1c2d3e4f5a6b",
     "name": "URL Shortener API",
-    "description": "Routes of the URL Shortener API (Go + Gin + SQLite).\n\nSet the `baseUrl` variable to the deployed address (default `http://localhost:8080`).\n\nErrors always use the shape `{\"error\": \"message\"}`.",
+    "description": "Routes of the URL Shortener API (Go + Gin + SQLite).\n\nSet the `baseUrl` variable to the deployed address (default `http://localhost:8080`).\n\nThe `short_url` returned by `POST /shorten` redirects to the original URL; `GET /api/urls/:shortURL` returns it as JSON.\n\nErrors always use the shape `{\"error\": \"message\"}`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -311,7 +311,7 @@
       ]
     },
     {
-      "name": "Get original URL",
+      "name": "Redirect to original URL",
       "request": {
         "method": "GET",
         "header": [],
@@ -324,7 +324,10 @@
             "{{shortCode}}"
           ]
         },
-        "description": "Returns the original URL for a short code as JSON. It does **not** redirect; use `GET /redirect/:shortURL` for that."
+        "description": "The public short link returned by `POST /shorten`. Redirects (`302 Found`) to the original URL.\n\nAutomatic redirect following is disabled for this request so the `Location` header is visible."
+      },
+      "protocolProfileBehavior": {
+        "followRedirects": false
       },
       "event": [
         {
@@ -332,15 +335,15 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('returns originalURL', () => pm.expect(pm.response.json().originalURL).to.match(/^https?:\\/\\//));"
+              "pm.test('status is 302', () => pm.response.to.have.status(302));",
+              "pm.test('has Location header', () => pm.response.to.have.header('Location'));"
             ]
           }
         }
       ],
       "response": [
         {
-          "name": "Found",
+          "name": "Redirect",
           "originalRequest": {
             "method": "GET",
             "header": [],
@@ -354,16 +357,15 @@
               ]
             }
           },
-          "status": "OK",
-          "code": 200,
+          "status": "Found",
+          "code": 302,
           "header": [
             {
-              "key": "Content-Type",
-              "value": "application/json; charset=utf-8"
+              "key": "Location",
+              "value": "https://go.dev/doc"
             }
           ],
-          "body": "{\"originalURL\": \"https://go.dev/doc\"}",
-          "_postman_previewlanguage": "json"
+          "body": ""
         },
         {
           "name": "Unknown code",
@@ -394,24 +396,22 @@
       ]
     },
     {
-      "name": "Redirect to original URL",
+      "name": "Get original URL",
       "request": {
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{baseUrl}}/redirect/{{shortCode}}",
+          "raw": "{{baseUrl}}/api/urls/{{shortCode}}",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
-            "redirect",
+            "api",
+            "urls",
             "{{shortCode}}"
           ]
         },
-        "description": "Redirects (`302 Found`) to the original URL. Automatic redirect following is disabled for this request so the `Location` header is visible."
-      },
-      "protocolProfileBehavior": {
-        "followRedirects": false
+        "description": "Returns the original URL for a short code as JSON, without redirecting."
       },
       "event": [
         {
@@ -419,38 +419,40 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('status is 302', () => pm.response.to.have.status(302));",
-              "pm.test('has Location header', () => pm.response.to.have.header('Location'));"
+              "pm.test('status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('returns originalURL', () => pm.expect(pm.response.json().originalURL).to.match(/^https?:\\/\\//));"
             ]
           }
         }
       ],
       "response": [
         {
-          "name": "Redirect",
+          "name": "Found",
           "originalRequest": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/redirect/{{shortCode}}",
+              "raw": "{{baseUrl}}/api/urls/{{shortCode}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "redirect",
+                "api",
+                "urls",
                 "{{shortCode}}"
               ]
             }
           },
-          "status": "Found",
-          "code": 302,
+          "status": "OK",
+          "code": 200,
           "header": [
             {
-              "key": "Location",
-              "value": "https://go.dev/doc"
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
             }
           ],
-          "body": ""
+          "body": "{\"originalURL\": \"https://go.dev/doc\"}",
+          "_postman_previewlanguage": "json"
         },
         {
           "name": "Unknown code",
@@ -458,12 +460,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/redirect/{{shortCode}}",
+              "raw": "{{baseUrl}}/api/urls/{{shortCode}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "redirect",
+                "api",
+                "urls",
                 "{{shortCode}}"
               ]
             }

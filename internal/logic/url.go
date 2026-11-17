@@ -41,15 +41,15 @@ func ValidateURL(rawURL string) error {
 }
 
 // GetFullURL builds the public short link. When baseURL is set (BASE_URL env) it
-// wins over request data, which reports plain http behind a TLS-terminating proxy.
-func GetFullURL(shortURL, baseURL string, hasTLS bool, host string) string {
+// wins over the request host and scheme.
+func GetFullURL(shortURL, baseURL string, isHTTPS bool, host string) string {
 	if baseURL != "" {
 		return strings.TrimRight(baseURL, "/") + "/" + shortURL
 	}
 
 	scheme := "http"
 
-	if hasTLS {
+	if isHTTPS {
 		scheme = "https"
 	}
 

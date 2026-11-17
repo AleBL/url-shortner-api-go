@@ -55,7 +55,7 @@ func TestGetFullURL(t *testing.T) {
 	tests := []struct {
 		name    string
 		baseURL string
-		hasTLS  bool
+		isHTTPS bool
 		host    string
 		want    string
 	}{
@@ -67,7 +67,7 @@ func TestGetFullURL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := GetFullURL("abc123", tt.baseURL, tt.hasTLS, tt.host)
+			got := GetFullURL("abc123", tt.baseURL, tt.isHTTPS, tt.host)
 			if got != tt.want {
 				t.Fatalf("got %q, want %q", got, tt.want)
 			}

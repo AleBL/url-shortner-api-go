@@ -7,8 +7,8 @@ import (
 	"sync"
 	"url-shortener/models"
 
-	"github.com/jinzhu/gorm"
-	_ "github.com/mattn/go-sqlite3"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 var db *gorm.DB
@@ -34,12 +34,15 @@ func ConnectDB() *gorm.DB {
 
 		var err error
 		// busy_timeout makes concurrent writers wait instead of failing with "database is locked".
-		db, err = gorm.Open("sqlite3", path+"?_busy_timeout=5000")
+		// TranslateError maps driver errors to gorm.ErrDuplicatedKey and friends.
+		db, err = gorm.Open(sqlite.Open(path+"?_busy_timeout=5000"), &gorm.Config{TranslateError: true})
 		if err != nil {
 			log.Fatal("Error opening database:", err)
 		}
 
-		db.AutoMigrate(&models.URL{})
+		if err := db.AutoMigrate(&models.URL{}); err != nil {
+			log.Fatal("Error migrating database:", err)
+		}
 	})
 	return db
 }
@@ -48,5 +51,10 @@ func Close() error {
 	if db == nil {
 		return nil
 	}
-	return db.Close()
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	return sqlDB.Close()
 }
