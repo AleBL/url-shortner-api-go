@@ -1,0 +1,497 @@
+{
+  "info": {
+    "_postman_id": "3f1c9a2e-6b7d-4e8f-9a0b-1c2d3e4f5a6b",
+    "name": "URL Shortener API",
+    "description": "Routes of the URL Shortener API (Go + Gin + SQLite).\n\nSet the `baseUrl` variable to the deployed address (default `http://localhost:8080`).\n\nErrors always use the shape `{\"error\": \"message\"}`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        },
+        "description": "Liveness check. Use it as the platform health check path."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('reports ok', () => pm.expect(pm.response.json().status).to.eql('ok'));"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "OK",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            }
+          ],
+          "body": "{\"status\": \"ok\"}",
+          "_postman_previewlanguage": "json"
+        }
+      ]
+    },
+    {
+      "name": "Shorten URL",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/shorten",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "shorten"
+          ]
+        },
+        "description": "Creates a 6 character short code for an absolute `http` or `https` URL (max 2048 chars).\n\nThe returned `short_url` uses `BASE_URL` when it is set on the server; otherwise it is built from the request host and scheme.\n\nThe test script stores the generated code in the `shortCode` collection variable, so run this request before the other URL requests.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"url\": \"https://go.dev/doc\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', () => pm.response.to.have.status(200));",
+              "const shortURL = pm.response.json().short_url;",
+              "pm.test('returns a short_url', () => pm.expect(shortURL).to.match(/\\/[A-Za-z0-9]{6}$/));",
+              "pm.collectionVariables.set('shortCode', shortURL.split('/').pop());"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Created",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shorten",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shorten"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://go.dev/doc\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            }
+          ],
+          "body": "{\"short_url\": \"http://localhost:8080/aZ3kP9\"}",
+          "_postman_previewlanguage": "json"
+        },
+        {
+          "name": "Invalid JSON body",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shorten",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shorten"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "url=https://go.dev",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            }
+          ],
+          "body": "{\"error\": \"Error reading JSON\"}",
+          "_postman_previewlanguage": "json"
+        },
+        {
+          "name": "Missing URL",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shorten",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shorten"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            }
+          ],
+          "body": "{\"error\": \"URL not provided\"}",
+          "_postman_previewlanguage": "json"
+        },
+        {
+          "name": "Invalid URL",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shorten",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shorten"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"go.dev\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            }
+          ],
+          "body": "{\"error\": \"URL must be an absolute http or https URL\"}",
+          "_postman_previewlanguage": "json"
+        },
+        {
+          "name": "Database error",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shorten",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shorten"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://go.dev/doc\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Internal Server Error",
+          "code": 500,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            }
+          ],
+          "body": "{\"error\": \"Error saving URL\"}",
+          "_postman_previewlanguage": "json"
+        }
+      ]
+    },
+    {
+      "name": "Get original URL",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/{{shortCode}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "{{shortCode}}"
+          ]
+        },
+        "description": "Returns the original URL for a short code as JSON. It does **not** redirect; use `GET /redirect/:shortURL` for that."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('returns originalURL', () => pm.expect(pm.response.json().originalURL).to.match(/^https?:\\/\\//));"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Found",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{shortCode}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{shortCode}}"
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            }
+          ],
+          "body": "{\"originalURL\": \"https://go.dev/doc\"}",
+          "_postman_previewlanguage": "json"
+        },
+        {
+          "name": "Unknown code",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{shortCode}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{shortCode}}"
+              ]
+            }
+          },
+          "status": "Not Found",
+          "code": 404,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            }
+          ],
+          "body": "{\"error\": \"URL not found\"}",
+          "_postman_previewlanguage": "json"
+        }
+      ]
+    },
+    {
+      "name": "Redirect to original URL",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/redirect/{{shortCode}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "redirect",
+            "{{shortCode}}"
+          ]
+        },
+        "description": "Redirects (`302 Found`) to the original URL. Automatic redirect following is disabled for this request so the `Location` header is visible."
+      },
+      "protocolProfileBehavior": {
+        "followRedirects": false
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 302', () => pm.response.to.have.status(302));",
+              "pm.test('has Location header', () => pm.response.to.have.header('Location'));"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Redirect",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/redirect/{{shortCode}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "redirect",
+                "{{shortCode}}"
+              ]
+            }
+          },
+          "status": "Found",
+          "code": 302,
+          "header": [
+            {
+              "key": "Location",
+              "value": "https://go.dev/doc"
+            }
+          ],
+          "body": ""
+        },
+        {
+          "name": "Unknown code",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/redirect/{{shortCode}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "redirect",
+                "{{shortCode}}"
+              ]
+            }
+          },
+          "status": "Not Found",
+          "code": 404,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            }
+          ],
+          "body": "{\"error\": \"URL not found\"}",
+          "_postman_previewlanguage": "json"
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "shortCode",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
