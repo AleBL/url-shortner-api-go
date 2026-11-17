@@ -62,6 +62,7 @@ DATABASE_URL="postgres://postgres:test@localhost:5432/shortener?sslmode=disable"
 | `DATABASE_URL` | empty                         | PostgreSQL connection string (e.g. `postgres://user:pass@host/db?sslmode=require`). When set, it is used instead of SQLite. |
 | `DB_PATH`  | `./internal/database/database.db` | SQLite file, used when `DATABASE_URL` is empty. The directory is created if missing. The Docker image uses `/data/database.db`. |
 | `BASE_URL` | empty                             | Public address used to build `short_url` (e.g. `https://sho.rt`). When empty, the request host is used, with `https` detected from TLS or the `X-Forwarded-Proto` header. |
+| `ALLOWED_ORIGINS` | empty                      | Comma-separated frontend origins allowed by CORS (e.g. `https://app.example.com,http://localhost:5173`). When empty, browsers only accept same-origin calls. |
 | `GIN_MODE` | `debug`                           | Use `release` in production (already set in the Docker image).                                                               |
 
 ## Endpoints
