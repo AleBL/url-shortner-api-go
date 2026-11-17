@@ -42,8 +42,9 @@ func ShortenURL(c *gin.Context) {
 		return
 	}
 
-	hasTLS := c.Request.TLS != nil
-	c.JSON(http.StatusOK, gin.H{"short_url": logic.GetFullURL(shortURL, os.Getenv("BASE_URL"), hasTLS, c.Request.Host)})
+	// Platforms like Render terminate TLS at their proxy and forward plain HTTP.
+	isHTTPS := c.Request.TLS != nil || c.GetHeader("X-Forwarded-Proto") == "https"
+	c.JSON(http.StatusOK, gin.H{"short_url": logic.GetFullURL(shortURL, os.Getenv("BASE_URL"), isHTTPS, c.Request.Host)})
 }
 
 func saveWithUniqueShortURL(originalURL string) (string, error) {

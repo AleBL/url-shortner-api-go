@@ -95,6 +95,21 @@ func TestShortenURLUsesBaseURL(t *testing.T) {
 	}
 }
 
+func TestShortenURLBehindTLSProxy(t *testing.T) {
+	router := newRouter()
+
+	req := httptest.NewRequest(http.MethodPost, "/shorten", strings.NewReader(`{"url":"https://go.dev"}`))
+	req.Host = "sho.rt"
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Forwarded-Proto", "https")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if !strings.Contains(rec.Body.String(), `"short_url":"https://sho.rt/`) {
+		t.Fatalf("expected https short_url, got %s", rec.Body)
+	}
+}
+
 func TestOriginalURL(t *testing.T) {
 	router := newRouter()
 	code := shorten(t, router, "https://go.dev/doc")
