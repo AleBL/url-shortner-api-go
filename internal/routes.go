@@ -29,7 +29,10 @@ func SetupRoutes(router *gin.Engine) {
 			AllowOrigins: origins,
 			AllowMethods: []string{http.MethodGet, http.MethodPost},
 			AllowHeaders: []string{"Content-Type"},
-			MaxAge:       12 * time.Hour,
+			// Browsers hide non-safelisted response headers from cross-origin
+			// scripts; the frontend reads Retry-After after a 429.
+			ExposeHeaders: []string{"Retry-After"},
+			MaxAge:        12 * time.Hour,
 		}))
 	}
 
