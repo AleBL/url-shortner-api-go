@@ -1,24 +1,52 @@
 package logic
 
 import (
+	"errors"
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
+	"net/url"
 	"strings"
-	"time"
 )
 
-func GenerateShortURL() string {
-	const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	newRandom := rand.New(rand.NewSource(time.Now().UnixNano()))
+const (
+	shortURLChars  = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	shortURLLength = 6
+	maxURLLength   = 2048
+)
 
+var ErrInvalidURL = errors.New("URL must be an absolute http or https URL")
+
+// GenerateShortURL uses the auto-seeded global generator, which is safe for
+// concurrent use; reseeding with the clock made simultaneous requests collide.
+func GenerateShortURL() string {
 	var shortURL strings.Builder
-	for i := 0; i < 6; i++ {
-		shortURL.WriteByte(chars[newRandom.Intn(len(chars))])
+	for i := 0; i < shortURLLength; i++ {
+		shortURL.WriteByte(shortURLChars[rand.IntN(len(shortURLChars))])
 	}
 	return shortURL.String()
 }
 
-func GetFullURL(shortURL string, hasTLS bool, host string) string {
+// ValidateURL accepts only absolute http(s) URLs, so the redirect never points
+// to a relative path or a non-web scheme.
+func ValidateURL(rawURL string) error {
+	if len(rawURL) > maxURLLength {
+		return ErrInvalidURL
+	}
+
+	parsed, err := url.ParseRequestURI(rawURL)
+	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" {
+		return ErrInvalidURL
+	}
+	return nil
+}
+
+// GetFullURL builds the public short link. When baseURL is set (BASE_URL env) it
+// wins over request data, which reports plain http behind a TLS-terminating proxy.
+func GetFullURL(shortURL, baseURL string, hasTLS bool, host string) string {
+	if baseURL != "" {
+		return strings.TrimRight(baseURL, "/") + "/" + shortURL
+	}
+
 	scheme := "http"
 
 	if hasTLS {
