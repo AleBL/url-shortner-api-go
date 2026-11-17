@@ -103,6 +103,28 @@ func TestCORSAllowedOrigin(t *testing.T) {
 	}
 }
 
+func TestCORSExposesRetryAfterOnRateLimit(t *testing.T) {
+	t.Setenv("ALLOWED_ORIGINS", "https://app.example.com")
+	t.Setenv("RATE_LIMIT_PER_MINUTE", "1")
+	router := newTestRouter()
+
+	request(router, http.MethodPost, "/shorten", "https://app.example.com")
+	rec := request(router, http.MethodPost, "/shorten", "https://app.example.com")
+
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusTooManyRequests)
+	}
+	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "https://app.example.com" {
+		t.Fatalf("Access-Control-Allow-Origin = %q", got)
+	}
+	if got := rec.Header().Get("Access-Control-Expose-Headers"); !strings.Contains(strings.ToLower(got), "retry-after") {
+		t.Fatalf("Access-Control-Expose-Headers = %q, want it to include Retry-After", got)
+	}
+	if rec.Header().Get("Retry-After") == "" {
+		t.Fatal("Retry-After header is missing")
+	}
+}
+
 func TestCORSRejectsOtherOrigins(t *testing.T) {
 	t.Setenv("ALLOWED_ORIGINS", "https://app.example.com")
 	router := newTestRouter()
