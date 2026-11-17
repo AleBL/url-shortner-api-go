@@ -11,13 +11,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// maxShortURLAttempts bounds retries when a generated code already exists.
-const maxShortURLAttempts = 5
+const (
+	// maxShortURLAttempts bounds retries when a generated code already exists.
+	maxShortURLAttempts = 5
+	// maxRequestBodyBytes caps POST /shorten bodies; a valid URL has at most 2048 chars.
+	maxRequestBodyBytes = 4 << 10
+)
 
 func ShortenURL(c *gin.Context) {
 	var request struct {
 		URL string `json:"url"`
 	}
+
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxRequestBodyBytes)
 
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Error reading JSON"})

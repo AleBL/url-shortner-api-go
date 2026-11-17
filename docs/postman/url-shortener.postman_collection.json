@@ -82,7 +82,7 @@
             "shorten"
           ]
         },
-        "description": "Creates a 6 character short code for an absolute `http` or `https` URL (max 2048 chars).\n\nThe returned `short_url` uses `BASE_URL` when it is set on the server; otherwise it is built from the request host and scheme.\n\nThe test script stores the generated code in the `shortCode` collection variable, so run this request before the other URL requests.",
+        "description": "Creates a 6 character short code for an absolute `http` or `https` URL (max 2048 chars).\n\nThe returned `short_url` uses `BASE_URL` when it is set on the server; otherwise it is built from the request host and scheme.\n\nThe test script stores the generated code in the `shortCode` collection variable, so run this request before the other URL requests.\n\nRate limited per client IP (`RATE_LIMIT_PER_MINUTE`, default 10). Over the limit it returns `429` with a `Retry-After` header in seconds.",
         "body": {
           "mode": "raw",
           "raw": "{\n  \"url\": \"https://go.dev/doc\"\n}",
@@ -267,6 +267,50 @@
           ],
           "body": "{\"error\": \"URL must be an absolute http or https URL\"}",
           "_postman_previewlanguage": "json"
+        },
+        {
+          "name": "Rate limited",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shorten",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shorten"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://go.dev/doc\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "Too Many Requests",
+          "code": 429,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Retry-After",
+              "value": "6"
+            }
+          ],
+          "body": "{\"error\": \"Too many requests\"}"
         },
         {
           "name": "Database error",
