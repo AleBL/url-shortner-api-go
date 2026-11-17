@@ -112,24 +112,29 @@ Import [`docs/postman/url-shortener.postman_collection.json`](docs/postman/url-s
 
 ## Deploy
 
-### Render
+### Render (free)
 
-The repository includes a [Render Blueprint](render.yaml) that creates a Docker web service with a 1 GB persistent disk mounted at `/data`.
+The repository includes a [Render Blueprint](render.yaml) that creates a free Docker web service. Free services have no persistent disk and lose local files on every deploy, restart or spin-down, so the data is stored in an external PostgreSQL database. [Neon](https://neon.com) has a permanent free plan that does not require a credit card.
 
-1. In the Render dashboard, choose **New > Blueprint** and connect this repository.
-2. Review the plan and confirm. Persistent disks require a paid instance type.
-3. After the first deploy, the API is available at `https://<service-name>.onrender.com`.
+1. Create a Neon project in the region closest to Render's (AWS US East, N. Virginia) and copy its connection string. Prefer the direct connection (pooling disabled).
+2. In the Render dashboard, choose **New > Blueprint** and connect this repository.
+3. Paste the Neon connection string when Render asks for `DATABASE_URL`.
+4. After the first deploy, the API is available at `https://<service-name>.onrender.com`.
 
 Deploys run automatically after the CI checks pass on `master`. Optionally set `BASE_URL` in the service environment when the short links must use a different domain than the request host.
 
-Limitations of a service with a disk: a single instance, and a few seconds of downtime on each deploy.
+Free plan limitations:
+
+- Render spins the service down after 15 minutes without traffic; the next request takes about a minute.
+- Render grants 750 free instance hours per month, enough for one service running all month.
+- Neon's free plan has 1 GB of storage per project and suspends the database after 5 minutes idle (it resumes in under a second).
 
 ### Other platforms
 
 The Docker image is self-contained:
 
 1. Build from the `Dockerfile`.
-2. Mount a persistent volume at `/data`. Without it, every redeploy erases the database.
+2. Set `DATABASE_URL` to a PostgreSQL database, or mount a persistent volume at `/data` to use SQLite. Without either, every redeploy erases the database.
 3. Use `/health` as the health check path.
 
 The container runs as root because platform volumes are often mounted owned by root, which a non-root user cannot write to.
